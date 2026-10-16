@@ -83,20 +83,16 @@ export async function POST(request: Request): Promise<Response> {
             send({
               stage: "error",
               error:
-                `Repository "${owner}/${repo}" not found or is private and your token can't see it. ` +
-                `Fix: GitHub → Settings → Developer settings → Personal access tokens → ` +
-                `grant this token access to "${repo}" with Contents: Read (fine-grained) ` +
-                `or "repo" scope (classic), then restart the dev server (needed to reload .env).`,
+                `Repository "${owner}/${repo}" was not found or is private. Check the URL and repository access.`,
               code: "REPO_NOT_FOUND_OR_PRIVATE",
             });
           } else if (msg.includes("401")) {
-            send({ stage: "error", error: "Bad GitHub token — check GITHUB_TOKEN in .env", code: "INTERNAL_ERROR" });
+            send({ stage: "error", error: "We couldn't access this repository. Please check repository access and try again.", code: "INTERNAL_ERROR" });
           } else if (msg.includes("429") || msg.includes("rate limit")) {
             send({ stage: "error", error: "GitHub rate limit exceeded. Try again later.", code: "RATE_LIMITED" });
           } else {
-            send({ stage: "error", error: `GitHub error: ${msg}`, code: "INTERNAL_ERROR" });
+            send({ stage: "error", error: "We couldn't fetch the repository. Please try again later.", code: "INTERNAL_ERROR" });
           }
-          controller.close();
           return;
         }
 
@@ -110,8 +106,7 @@ export async function POST(request: Request): Promise<Response> {
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error(`[analyze] fetchRepoTree failed: ${msg}`);
-          send({ stage: "error", error: `Could not fetch file tree: ${msg}`, code: "INTERNAL_ERROR" });
-          controller.close();
+          send({ stage: "error", error: "We couldn't read the repository files. Please try again later.", code: "INTERNAL_ERROR" });
           return;
         }
 
@@ -151,7 +146,7 @@ export async function POST(request: Request): Promise<Response> {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[analyze] Unexpected error: ${msg}`);
-        send({ stage: "error", error: `Analysis failed: ${msg}`, code: "INTERNAL_ERROR" });
+        send({ stage: "error", error: "We couldn't complete the analysis. Please try again in a few minutes.", code: "INTERNAL_ERROR" });
       } finally {
         controller.close();
       }

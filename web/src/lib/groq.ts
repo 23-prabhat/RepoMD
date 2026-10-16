@@ -130,27 +130,30 @@ const responseJsonSchema = {
   ],
 };
 
-function buildPrompt(context: RepoContext, files: FetchedFile[]): string {
+function buildPrompt(context: RepoContext, files: FetchedFile[], contextBudget = 8_000): string {
   const { repo, treeText, treeTruncated } = context;
 
   const metaSection = [
     `Name: ${repo.full_name}`,
-    `Description: ${repo.description ?? "N/A"}`,
+    `Description: ${(repo.description ?? "N/A").slice(0, 500)}`,
     `Primary Language: ${repo.language ?? "N/A"}`,
     `Topics: ${repo.topics?.join(", ") || "none"}`,
     `Stars: ${repo.stargazers_count}`,
     `Default Branch: ${repo.default_branch}`,
   ].join("\n");
 
-  const treeSection = treeTruncated
-    ? `${treeText}\n... (tree truncated by GitHub API)`
+  const treeLimit = Math.floor(contextBudget / 4);
+  const treeSection = treeText.length > treeLimit || treeTruncated
+    ? `${treeText.slice(0, treeLimit)}\n... (tree truncated)`
     : treeText;
 
-  const filesSection = files
+  const selectedFiles = files.slice(0, 20);
+  const perFileLimit = Math.floor((contextBudget - treeLimit) / Math.max(selectedFiles.length, 1));
+  const filesSection = selectedFiles
     .map((f) => {
       const lines = f.content.split("\n");
-      const truncated = lines.length > 300;
-      const body = truncated ? lines.slice(0, 300).join("\n") + "\n... (truncated)" : f.content;
+      const excerpt = lines.slice(0, 150).join("\n").slice(0, perFileLimit);
+      const body = excerpt.length < f.content.length ? `${excerpt}\n... (truncated)` : excerpt;
       return `=== FILE: ${f.path} ===\n${body}\n=== END: ${f.path} ===`;
     })
     .join("\n\n");
@@ -187,14 +190,15 @@ Produce a JSON object with exactly these six keys:
    - architectureStyle: e.g., "MVC", "Microservices", "Monorepo", "Serverless", "Event-driven"
    - keyDecisions: Array of notable architectural or design decisions observed in the code.
 
-Be specific and use actual file paths from this repo. Do not hallucinate files that do not appear in the tree or content.`;
+Be concise: use at most 8 items per array and short descriptions. Return all six required sections as valid JSON. Be specific and use actual file paths from this repo. Do not hallucinate files that do not appear in the tree or content.`;
 }
 
 async function analyzeWithGroq(
   context: RepoContext,
-  files: FetchedFile[]
+  files: FetchedFile[],
+  contextBudget = 8_000
 ): Promise<AnalysisResult> {
-  const prompt = buildPrompt(context, files);
+  const prompt = buildPrompt(context, files, contextBudget);
 
   const response = await getGroqClient().chat.completions.create({
     model: GROQ_MODEL,
@@ -214,6 +218,8 @@ async function analyzeWithGroq(
       },
     },
     temperature: 0.2,
+    max_completion_tokens: 3_000,
+    reasoning_effort: "low",
   });
 
   const text = response.choices[0]?.message.content;
@@ -244,15 +250,28 @@ export async function analyzeRepository(
   context: RepoContext,
   files: FetchedFile[]
 ): Promise<AnalysisResult> {
+  let primaryError: unknown;
   if (process.env.GROQ_API_KEY) {
     try {
       return await analyzeWithGroq(context, files);
     } catch (error) {
-      console.warn("[ai] Groq analysis failed; trying Gemini fallback", error);
+      primaryError = error;
+      console.warn("[ai] Primary analysis failed", error);
+      // Retry once with a smaller context for request-size or structured-output failures.
+      if (error instanceof Groq.APIError &&
+          (error.status === 413 || (error.status === 400 && error.message.includes("json_validate_failed")))) {
+        try {
+          return await analyzeWithGroq(context, files, 4_000);
+        } catch (retryError) {
+          primaryError = retryError;
+          console.warn("[ai] Compact analysis retry failed", retryError);
+        }
+      }
     }
   }
 
   if (!process.env.GEMINI_API_KEY) {
+    if (primaryError) throw primaryError;
     throw new Error(
       "No AI provider is available. Configure GEMINI_API_KEY or GROQ_API_KEY."
     );

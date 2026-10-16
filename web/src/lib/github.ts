@@ -27,7 +27,13 @@ async function githubFetch(url: string): Promise<Response> {
     headers["Authorization"] = `Bearer ${GITHUB_TOKEN}`;
   }
 
-  const res = await fetch(url, { headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  } catch {
+    // Retry a transient connection failure once, with a bounded wait.
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  }
 
   if (!res.ok) {
     if (res.status === 404) {
