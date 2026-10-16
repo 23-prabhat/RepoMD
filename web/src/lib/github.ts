@@ -115,12 +115,20 @@ export async function fetchRepoTree(
   return res.json() as Promise<GitHubTreeResponse>;
 }
 
-const ENTRY_POINT_PATTERNS = /^(src\/|)?(index|main|server|app|start)\.[a-z]+$/i;
+const ENTRY_POINT_PATTERNS = /(^|\/)(index|main|server|app|start|bootstrap|cli|worker|page|layout|route|handler)\.(?:[cm]?[jt]sx?|py|go|rs|java|kt|rb|php|cs)$/i;
+const ARCHITECTURE_FILE_PATTERNS = /(^|\/)(routes?|controllers?|services?|repositories?|models?|schemas?|middleware|auth|database|db|store|providers?|adapters?|clients?|commands?|handlers?)(\/|\.)/i;
+const SOURCE_FILE_PATTERN = /\.(?:[cm]?[jt]sx?|py|go|rs|java|kt|rb|php|cs|vue|svelte)$/i;
+const LOW_VALUE_PATH_PATTERN = /(^|\/)(node_modules|vendor|dist|build|coverage|fixtures?|snapshots?|generated)(\/|$)|\.(?:min\.js|map|lock)$/i;
 const CONFIG_FILES = new Set([
   "package.json",
+  "pnpm-workspace.yaml",
+  "requirements.txt",
+  "Gemfile",
   "pyproject.toml",
   "go.mod",
   "Cargo.toml",
+  "pom.xml",
+  "build.gradle",
   "tsconfig.json",
   "Dockerfile",
   "docker-compose.yml",
@@ -132,64 +140,68 @@ const README_PATTERN = /^README/i;
 export function selectPriorityFiles(tree: GitHubTreeResponse, maxFiles = 35): string[] {
   const blobs = tree.tree.filter(
     (item): item is GitHubTreeItem & { type: "blob" } =>
-      item.type === "blob" && (item.size ?? 0) <= 100_000
+      item.type === "blob" &&
+      (item.size ?? 0) <= 100_000 &&
+      !LOW_VALUE_PATH_PATTERN.test(item.path)
   );
 
-  // Tier 1: entry points (max 3)
-  const tier1 = blobs
-    .filter((f) => ENTRY_POINT_PATTERNS.test(f.path))
-    .slice(0, 3)
-    .map((f) => f.path);
+  const selected = new Set<string>();
+  const byShallowPath = (a: GitHubTreeItem, b: GitHubTreeItem) => {
+    const depth = a.path.split("/").length - b.path.split("/").length;
+    return depth || a.path.localeCompare(b.path);
+  };
+  const addTier = (candidates: GitHubTreeItem[], limit: number) => {
+    let added = 0;
+    for (const file of candidates.sort(byShallowPath)) {
+      if (selected.size >= maxFiles || added >= limit) break;
+      if (selected.has(file.path)) continue;
+      selected.add(file.path);
+      added++;
+    }
+  };
 
-  // Tier 2: config files (max 5)
-  const tier2 = blobs
-    .filter((f) => {
-      const name = f.path.split("/").pop() ?? "";
-      return CONFIG_FILES.has(name) || NEXT_CONFIG_PATTERN.test(name);
-    })
-    .slice(0, 5)
-    .map((f) => f.path);
+  // Runtime entry points reveal control flow. Include framework conventions such
+  // as Next.js page/route files as well as traditional main/server files.
+  addTier(blobs.filter((file) => ENTRY_POINT_PATTERNS.test(file.path)), 8);
 
-  // Tier 3: README (max 1)
-  const tier3 = blobs
-    .filter((f) => README_PATTERN.test(f.path.split("/").pop() ?? ""))
-    .slice(0, 1)
-    .map((f) => f.path);
+  // Manifests and deployment configuration identify package boundaries,
+  // frameworks, commands, infrastructure, and generated runtime behavior.
+  addTier(blobs.filter((file) => {
+    const name = file.path.split("/").pop() ?? "";
+    return CONFIG_FILES.has(name) || NEXT_CONFIG_PATTERN.test(name);
+  }), 7);
 
-  const selected = new Set([...tier1, ...tier2, ...tier3]);
+  addTier(
+    blobs.filter((file) => README_PATTERN.test(file.path.split("/").pop() ?? "")),
+    1
+  );
 
-  // Tier 4: top-level source files in root or src/ (max 10)
-  const tier4Candidates = blobs.filter((f) => {
-    if (selected.has(f.path)) return false;
-    const parts = f.path.split("/");
-    // root-level or directly inside src/
-    return parts.length === 1 || (parts.length === 2 && parts[0] === "src");
-  });
-  let tier4Count = 0;
-  for (const f of tier4Candidates) {
-    if (tier4Count >= 10) break;
-    selected.add(f.path);
-    tier4Count++;
-  }
+  // Sample architectural seams rather than spending the remaining budget on
+  // whichever files happen to appear first in the Git tree.
+  addTier(blobs.filter((file) => ARCHITECTURE_FILE_PATTERNS.test(file.path)), 14);
 
-  // Tier 5: one representative file per unique top-level directory (max 16)
+  // Add one source file from each top-level package/application so monorepos
+  // and polyglot repositories retain coverage across runtime boundaries.
   const seenDirs = new Set<string>();
-  let tier5Count = 0;
   for (const f of blobs) {
+    if (selected.size >= maxFiles) break;
     if (selected.has(f.path)) continue;
+    if (!SOURCE_FILE_PATTERN.test(f.path)) continue;
     const parts = f.path.split("/");
     if (parts.length < 2) continue;
     const topDir = parts[0];
     if (seenDirs.has(topDir)) continue;
-    if (tier5Count >= 16 || selected.size >= maxFiles) break;
     seenDirs.add(topDir);
     selected.add(f.path);
-    tier5Count++;
   }
 
-  // Tier 6: fill any remaining slots with eligible source files. This lets
-  // repositories with fewer top-level directories still reach the file cap.
-  for (const f of blobs) {
+  // Fill remaining slots with shallow source files first, then other useful
+  // text files. This keeps the full 35-file budget useful for smaller repos.
+  const remaining = [...blobs].sort((a, b) => {
+    const sourceDifference = Number(SOURCE_FILE_PATTERN.test(b.path)) - Number(SOURCE_FILE_PATTERN.test(a.path));
+    return sourceDifference || byShallowPath(a, b);
+  });
+  for (const f of remaining) {
     if (selected.size >= maxFiles) break;
     selected.add(f.path);
   }

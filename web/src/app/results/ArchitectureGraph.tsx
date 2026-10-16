@@ -17,16 +17,16 @@ import {
   Position,
 } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
-import type { ExecutionFlowStep, CriticalFile } from "@/lib/types";
+import type { ExecutionFlowStep, CriticalFile, DependencyEdge } from "@/lib/types";
 
 import "@xyflow/react/dist/style.css";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const LAYER_NODE_W = 700;
+const LAYER_NODE_W = 900;
 const LAYER_NODE_H = 40;
-const FILE_NODE_W  = 190;
-const FILE_NODE_H  = 68;
+const FILE_NODE_W  = 220;
+const FILE_NODE_H  = 104;
 
 const LAYER_COLORS = [
   "var(--accent-rose)",
@@ -55,11 +55,24 @@ function shortName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
+function supportLayer(): string {
+  // Category remains visible on each node. One supporting lane keeps the map
+  // compact when several critical files are outside the primary flow.
+  return "Supporting components";
+}
+
+type ArchitectureFile = {
+  file: string;
+  layer: string;
+  description: string;
+  step?: number;
+};
+
 // ── Dagre layout ─────────────────────────────────────────────────────────────
 
 function getArchLayoutedElements(
   orderedLayers: string[],
-  filesByLayer: Map<string, ExecutionFlowStep[]>,
+  filesByLayer: Map<string, ArchitectureFile[]>,
   sortedSteps: ExecutionFlowStep[]
 ): Map<string, { x: number; y: number }> {
   const g = new dagre.graphlib.Graph();
@@ -171,6 +184,7 @@ function ArchLayerNode({ data }: { data: LayerNodeData }) {
 type FileNodeData = {
   label: string;
   fullPath: string;
+  description: string;
   layerColor: string;
   isCritical: boolean;
   category: string | null;
@@ -180,7 +194,7 @@ type FileNodeData = {
 };
 
 function ArchFileNode({ data }: { data: FileNodeData }) {
-  const { label, fullPath, layerColor, isCritical, category, categoryColor, highlighted, dimmed } = data;
+  const { label, fullPath, description, layerColor, isCritical, category, categoryColor, highlighted, dimmed } = data;
 
   const topBorderColor = isCritical ? categoryColor : layerColor;
   const sideBorderColor = highlighted
@@ -200,9 +214,9 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
           borderRadius: 8,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: "0 10px",
-          gap: 3,
+          justifyContent: "flex-start",
+          padding: "12px 11px 10px",
+          gap: 4,
           opacity: dimmed ? 0.15 : 1,
           transition: "opacity 0.2s, border-color 0.2s, box-shadow 0.2s",
           boxShadow: highlighted
@@ -236,6 +250,19 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
         >
           {fullPath}
         </div>
+        <div
+          style={{
+            fontSize: 9,
+            lineHeight: 1.35,
+            color: "var(--graph-text-muted)",
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {description}
+        </div>
         {isCritical && category && (
           <div
             style={{
@@ -265,6 +292,8 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
 // ── Custom edge ──────────────────────────────────────────────────────────────
 
 type ArchEdgeData = {
+  kind: "flow" | "dependency";
+  label: string;
   highlighted: boolean;
   dimmed: boolean;
 };
@@ -283,24 +312,56 @@ function ArchEdge({
   data?: ArchEdgeData;
   markerEnd?: string;
 }) {
-  const [edgePath] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
   const highlighted = data?.highlighted ?? false;
   const dimmed = data?.dimmed ?? false;
+  const dependency = data?.kind === "dependency";
+  const color = dependency ? "var(--accent-cyan)" : "var(--accent-rose)";
 
   return (
-    <BaseEdge
-      id={id}
-      path={edgePath}
-      markerEnd={markerEnd}
-      style={{
-        stroke: highlighted
-          ? "var(--accent-rose, #FF6B9D)"
-          : "color-mix(in srgb, var(--accent-rose, #FF6B9D) 40%, transparent)",
-        strokeWidth: highlighted ? 2 : 1.5,
-        opacity: dimmed ? 0.06 : 1,
-        transition: "stroke 0.2s, opacity 0.2s, stroke-width 0.2s",
-      }}
-    />
+    <>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        markerEnd={markerEnd}
+        style={{
+          stroke: highlighted ? color : `color-mix(in srgb, ${color} ${dependency ? 34 : 48}%, transparent)`,
+          strokeWidth: highlighted ? 2.4 : dependency ? 1.2 : 1.8,
+          strokeDasharray: dependency ? "6 5" : undefined,
+          opacity: dimmed ? 0.06 : 1,
+          transition: "stroke 0.2s, opacity 0.2s, stroke-width 0.2s",
+        }}
+      />
+      {!dimmed && data?.label && (
+        <foreignObject
+          x={labelX - 55}
+          y={labelY - 10}
+          width={110}
+          height={20}
+          style={{ pointerEvents: "none", overflow: "visible" }}
+        >
+          <div
+            title={data.label}
+            style={{
+              padding: "2px 5px",
+              borderRadius: 4,
+              background: "var(--graph-panel-bg)",
+              border: "1px solid var(--graph-node-border)",
+              color: highlighted ? color : "var(--graph-text-dim)",
+              fontFamily: "var(--font-geist-mono, monospace)",
+              fontSize: 8,
+              lineHeight: "13px",
+              textAlign: "center",
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {data.label}
+          </div>
+        </foreignObject>
+      )}
+    </>
   );
 }
 
@@ -314,9 +375,11 @@ const edgeTypes = { "arch": ArchEdge };
 export default function ArchitectureGraph({
   executionFlow,
   criticalFiles,
+  dependencyMap,
 }: {
   executionFlow: ExecutionFlowStep[];
   criticalFiles: CriticalFile[];
+  dependencyMap: DependencyEdge[];
 }) {
   const [, setHoveredNodeId] = useState<string | null>(null);
 
@@ -331,9 +394,29 @@ export default function ArchitectureGraph({
       if (!seen.has(layer)) { layers.push(layer); seen.add(layer); }
     });
 
-    const byLayer = new Map<string, ExecutionFlowStep[]>();
+    const byLayer = new Map<string, ArchitectureFile[]>();
     layers.forEach((l) => byLayer.set(l, []));
-    sorted.forEach((s) => byLayer.get(s.layer)!.push(s));
+    const includedFiles = new Set<string>();
+    sorted.forEach((step) => {
+      if (includedFiles.has(step.file)) return;
+      includedFiles.add(step.file);
+      byLayer.get(step.layer)!.push(step);
+    });
+
+    criticalFiles.forEach((critical) => {
+      if (includedFiles.has(critical.file)) return;
+      includedFiles.add(critical.file);
+      const layer = supportLayer();
+      if (!byLayer.has(layer)) {
+        layers.push(layer);
+        byLayer.set(layer, []);
+      }
+      byLayer.get(layer)!.push({
+        file: critical.file,
+        layer,
+        description: critical.reason,
+      });
+    });
 
     const cMap = new Map(criticalFiles.map((cf) => [cf.file, cf]));
 
@@ -390,6 +473,7 @@ export default function ArchitectureGraph({
         if (!pos) continue;
 
         const cf = criticalMap.get(file);
+        const architectureFile = (filesByLayer.get(layer) ?? []).find((item) => item.file === file);
         nodes.push({
           id: `file-${file}`,
           type: "arch-file" as const,
@@ -397,6 +481,7 @@ export default function ArchitectureGraph({
           data: {
             label: shortName(file),
             fullPath: file,
+            description: architectureFile?.description ?? cf?.reason ?? "Architectural component",
             layerColor,
             isCritical: !!cf,
             category: cf?.category ?? null,
@@ -432,12 +517,40 @@ export default function ArchitectureGraph({
         type: "arch",
         animated: true,
         markerEnd: { type: MarkerType.ArrowClosed, color: "var(--accent-rose, #FF6B9D)" },
-        data: { highlighted: false, dimmed: false } as ArchEdgeData,
+        data: {
+          kind: "flow",
+          label: sortedSteps[i + 1].layer,
+          highlighted: false,
+          dimmed: false,
+        } as ArchEdgeData,
+      });
+    }
+
+    const nodeIds = new Set(initialNodes.map((node) => node.id));
+    for (const dependency of dependencyMap) {
+      if (edges.length >= 24) break;
+      const source = `file-${dependency.from}`;
+      const target = `file-${dependency.to}`;
+      const key = `${source}||${target}`;
+      if (!nodeIds.has(source) || !nodeIds.has(target) || seenPairs.has(key)) continue;
+      seenPairs.add(key);
+      edges.push({
+        id: `arch-dep-${edges.length}`,
+        source,
+        target,
+        type: "arch",
+        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--accent-cyan)" },
+        data: {
+          kind: "dependency",
+          label: dependency.uses,
+          highlighted: false,
+          dimmed: false,
+        } as ArchEdgeData,
       });
     }
 
     return edges;
-  }, [sortedSteps]);
+  }, [sortedSteps, dependencyMap, initialNodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -487,7 +600,7 @@ export default function ArchitectureGraph({
 
   // ── Empty state ──────────────────────────────────────────────────────────────
 
-  if (executionFlow.length === 0) {
+  if (executionFlow.length === 0 && criticalFiles.length === 0) {
     return (
       <div
         style={{
@@ -500,7 +613,7 @@ export default function ArchitectureGraph({
           fontSize: 12,
         }}
       >
-        No execution flow data available
+        No architecture data available
       </div>
     );
   }
@@ -509,7 +622,7 @@ export default function ArchitectureGraph({
     <div
       className="arch-graph-wrap"
       style={{
-        height: 580,
+        height: 680,
         borderRadius: 14,
         overflow: "hidden",
         border: "1px solid color-mix(in srgb, var(--accent-rose) 18%, transparent)",
@@ -545,9 +658,6 @@ export default function ArchitectureGraph({
         }
         .arch-graph-wrap .react-flow__controls-button:hover svg {
           fill: var(--accent-rose, #FF6B9D);
-        }
-        .arch-graph-wrap .react-flow__edge-path {
-          stroke-dasharray: 5;
         }
       `}</style>
 
@@ -588,7 +698,8 @@ export default function ArchitectureGraph({
               padding: "10px 14px",
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 7,
+              minWidth: 156,
             }}
           >
             <div
@@ -601,7 +712,22 @@ export default function ArchitectureGraph({
                 marginBottom: 2,
               }}
             >
-              Layers
+              Architecture map
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                paddingBottom: 6,
+                marginBottom: 1,
+                borderBottom: "1px solid var(--graph-control-divider)",
+                color: "var(--graph-text-muted)",
+                fontFamily: "var(--font-geist-mono, monospace)",
+                fontSize: 9,
+              }}
+            >
+              <span>{orderedLayers.length} layers</span>
+              <span>{initialNodes.filter((node) => node.type === "arch-file").length} files</span>
             </div>
             {orderedLayers.map((layer) => {
               const lc = layerColorMap.get(layer)!;
@@ -629,6 +755,24 @@ export default function ArchitectureGraph({
                 </div>
               );
             })}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 5,
+                paddingTop: 7,
+                marginTop: 1,
+                borderTop: "1px solid var(--graph-control-divider)",
+                color: "var(--graph-text-muted)",
+                fontFamily: "var(--font-geist-mono, monospace)",
+                fontSize: 8,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              <span><b style={{ color: "var(--accent-rose)" }}>━━</b>&nbsp; execution flow</span>
+              <span><b style={{ color: "var(--accent-cyan)" }}>┄┄</b>&nbsp; dependency</span>
+            </div>
           </div>
         </Panel>
       </ReactFlow>

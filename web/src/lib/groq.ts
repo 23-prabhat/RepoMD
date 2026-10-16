@@ -8,8 +8,9 @@ import type { AnalysisResult, FetchedFile, RepoContext } from "./types";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const MAX_ANALYSIS_FILES = 35;
-const FULL_CONTEXT_BUDGET = 14_000;
-const COMPACT_CONTEXT_BUDGET = 7_000;
+const FULL_CONTEXT_BUDGET = 48_000;
+const COMPACT_CONTEXT_BUDGET = 20_000;
+const MAX_ANALYSIS_TOKENS = 5_000;
 
 function getGroqClient(): Groq {
   const apiKey = process.env.GROQ_API_KEY?.trim();
@@ -153,7 +154,7 @@ function buildPrompt(
     `Default Branch: ${repo.default_branch}`,
   ].join("\n");
 
-  const treeLimit = Math.floor(contextBudget / 4);
+  const treeLimit = Math.min(10_000, Math.floor(contextBudget / 5));
   const treeSection = treeText.length > treeLimit || treeTruncated
     ? `${treeText.slice(0, treeLimit)}\n... (tree truncated)`
     : treeText;
@@ -163,13 +164,19 @@ function buildPrompt(
   const filesSection = selectedFiles
     .map((f) => {
       const lines = f.content.split("\n");
-      const excerpt = lines.slice(0, 150).join("\n").slice(0, perFileLimit);
+      const excerpt = lines.slice(0, 240).join("\n").slice(0, perFileLimit);
       const body = excerpt.length < f.content.length ? `${excerpt}\n... (truncated)` : excerpt;
       return `=== FILE: ${f.path} ===\n${body}\n=== END: ${f.path} ===`;
     })
     .join("\n\n");
 
-  return `You are a senior software architect analyzing a GitHub repository. Your task is to produce a comprehensive intelligence report as structured JSON.
+  return `You are a senior software architect analyzing a GitHub repository. Produce an evidence-based architecture report as structured JSON.
+
+Analyze the repository in this order before writing the answer:
+1. Identify runtime boundaries, manifests, frameworks, and deployment targets.
+2. Locate real entry points and follow imports/calls through routing, business logic, persistence, and external services.
+3. Separate runtime code from tests, generated files, examples, and build configuration.
+4. Cross-check every named file against the supplied tree. Never invent a path.
 
 ## REPOSITORY METADATA
 ${metaSection}
@@ -183,25 +190,31 @@ ${filesSection}
 ## REQUIRED OUTPUT
 Produce a JSON object with exactly these six keys:
 
-1. **folderStructure** — Array of { path, purpose } for every meaningful directory and key file. Explain what each module owns in plain English.
+1. **folderStructure** — 8–16 { path, purpose } items covering the meaningful directories and boundary files. Describe each module's responsibility and avoid generic wording.
 
 2. **entryPoints** — Object with:
-   - primary: { file, description, executionFlow: string[] } — The single most important entry point and a step-by-step startup sequence.
-   - secondary: { file, description }[] — Other entry points (CLI scripts, alternative servers, test runners, etc.)
+   - primary: { file, description, executionFlow: string[] } — The main user-facing or runtime entry point, why it is primary, and 4–10 concrete startup/request steps.
+   - secondary: 0–6 { file, description } items for distinct runtime entry points such as a CLI, worker, API route, alternate server, or scheduled job. Do not list ordinary modules or tests unless the repository is a test tool.
 
-3. **dependencyMap** — Array of { from, to, uses } edges showing how files import/depend on each other. Focus on the most architecturally significant relationships.
+3. **dependencyMap** — 8–20 { from, to, uses } edges backed by visible imports, calls, or configuration. Prefer relationships that cross architectural boundaries. "uses" must name the concrete responsibility, symbol, API, or data being used.
 
-4. **criticalFiles** — Array of { file, reason, category } for the most important files. Categories: "auth", "database", "api", "config", "core", "routing", "middleware".
+4. **criticalFiles** — 6–12 { file, reason, category } items. Explain the consequence of changing each file. Use the best matching category from "auth", "database", "api", "config", "core", "routing", or "middleware".
 
-5. **executionFlow** — Array of { step, layer, file, description } tracing a typical request from entry to response (e.g., Route → Middleware → Controller → Service → Database).
+5. **executionFlow** — 6–12 { step, layer, file, description } items tracing one coherent, representative user action from entry to final response or side effect. Steps must be sequential, use real files, state what data/control is passed, and use stable layer names such as Client, Route, Middleware, Service, Data, External API, or Response. Do not mix unrelated flows.
 
 6. **repoSummary** — Object with:
    - description: One paragraph summary of what this repo does.
    - techStack: { languages[], frameworks[], databases[], tools[] }
-   - architectureStyle: e.g., "MVC", "Microservices", "Monorepo", "Serverless", "Event-driven"
-   - keyDecisions: Array of notable architectural or design decisions observed in the code.
+   - architectureStyle: 1–3 precise patterns supported by the files, comma-separated (for example "Layered monolith, server-rendered web app").
+   - keyDecisions: 4–8 notable decisions, each stating the observed choice and its architectural effect.
 
-Be concise: use at most 8 items per array and short descriptions. Return all six required sections as valid JSON. Be specific and use actual file paths from this repo. Do not hallucinate files that do not appear in the tree or content.`;
+Quality rules:
+- Prefer exact evidence over broad guesses. If evidence is limited, describe only what the tree and excerpts support.
+- Normalize paths exactly as they appear in the repository tree.
+- Do not duplicate files or relationships just to reach a target count.
+- Keep descriptions compact but specific enough that a developer can understand responsibility, control flow, and data flow.
+
+Return all six required sections as valid JSON with no prose outside the JSON object.`;
 }
 
 async function analyzeWithGroq(
@@ -229,7 +242,7 @@ async function analyzeWithGroq(
       },
     },
     temperature: 0.2,
-    max_completion_tokens: 3_000,
+    max_completion_tokens: MAX_ANALYSIS_TOKENS,
     reasoning_effort: "low",
   });
 
@@ -259,7 +272,7 @@ async function analyzeWithOpenCode(
       schema: responseJsonSchema,
     },
     temperature: 0.2,
-    maxTokens: 3_000,
+    maxTokens: MAX_ANALYSIS_TOKENS,
   });
 
   return JSON.parse(text) as AnalysisResult;

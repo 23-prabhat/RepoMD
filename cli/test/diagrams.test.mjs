@@ -8,9 +8,12 @@ const analysis = {
     primary: { file: "src/index.ts", description: "Starts the app", executionFlow: ["start"] },
     secondary: [{ file: "src/worker.ts", description: "Starts the worker" }],
   },
-  dependencyMap: [],
-  criticalFiles: [],
-  executionFlow: [{ step: 1, layer: "API", file: "src/index.ts", description: "Handles <requests>" }],
+  dependencyMap: [{ from: "src/index.ts", to: "src/service.ts", uses: "dispatches requests" }],
+  criticalFiles: [{ file: "src/service.ts", reason: "Owns business rules", category: "core" }],
+  executionFlow: [
+    { step: 1, layer: "API", file: "src/index.ts", description: "Handles <requests>" },
+    { step: 2, layer: "Service", file: "src/service.ts", description: "Applies business rules" },
+  ],
   repoSummary: {
     description: "Test repository",
     techStack: { languages: ["TypeScript"], frameworks: [], databases: [], tools: [] },
@@ -24,6 +27,9 @@ test("architecture SVG escapes content", () => {
   assert.match(svg, /^<\?xml/);
   assert.match(svg, /Handles &lt;requests&gt;/);
   assert.match(svg, /owner\/repo · Architecture/);
+  assert.match(svg, /2 LAYERS · 2 COMPONENTS/);
+  assert.match(svg, /CORE/);
+  assert.match(svg, /EXECUTION FLOW/);
 });
 
 test("entry point SVG includes primary and secondary entry points", () => {

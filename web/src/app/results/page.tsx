@@ -1303,6 +1303,7 @@ export default function ResultsPage() {
                 <ArchitectureGraph
                   executionFlow={analysis.executionFlow}
                   criticalFiles={analysis.criticalFiles}
+                  dependencyMap={analysis.dependencyMap}
                 />
               </section>
             </RevealSection>
