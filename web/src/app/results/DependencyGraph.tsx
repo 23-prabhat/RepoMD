@@ -75,11 +75,6 @@ function shortName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-// Fixed dark palette — graph is always a "dark canvas" regardless of page theme
-const GRAPH_BG = "#0b0d14";
-const NODE_BG = "#151824";
-const NODE_BORDER_IDLE = "rgba(255,255,255,0.10)";
-
 // ── Custom Node ──────────────────────────────────────────────────────────────
 
 type DepNodeData = {
@@ -100,8 +95,8 @@ function DepNode({ data }: { data: DepNodeData }) {
         style={{
           width: NODE_W,
           height: NODE_H,
-          background: NODE_BG,
-          border: `1px solid ${highlighted ? accentColor : NODE_BORDER_IDLE}`,
+          background: "var(--graph-node-bg)",
+          border: `1px solid ${highlighted ? accentColor : "var(--graph-node-border)"}`,
           borderLeft: `4px solid ${accentColor}`,
           borderRadius: 8,
           display: "flex",
@@ -121,7 +116,7 @@ function DepNode({ data }: { data: DepNodeData }) {
             fontFamily: "var(--font-geist-mono, monospace)",
             fontSize: 11,
             fontWeight: 700,
-            color: "rgba(255,255,255,0.92)",
+            color: "var(--graph-text)",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -133,7 +128,7 @@ function DepNode({ data }: { data: DepNodeData }) {
           style={{
             fontFamily: "var(--font-geist-mono, monospace)",
             fontSize: 9,
-            color: `color-mix(in srgb, ${accentColor} 55%, rgba(255,255,255,0.3))`,
+            color: `color-mix(in srgb, ${accentColor} 55%, var(--graph-text-muted))`,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -196,7 +191,9 @@ function DepEdge({
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          stroke: highlighted ? "#FFB800" : "rgba(255,184,0,0.45)",
+          stroke: highlighted
+            ? "var(--accent-amber)"
+            : "color-mix(in srgb, var(--accent-amber) 45%, transparent)",
           strokeWidth: highlighted ? 2 : 1,
           opacity: dimmed ? 0.07 : 1,
           transition: "stroke 0.2s, opacity 0.2s, stroke-width 0.2s",
@@ -214,7 +211,7 @@ function DepEdge({
             style={{
               fontFamily: "var(--font-geist-mono, monospace)",
               fontSize: 9,
-              color: highlighted ? "rgba(255,184,0,0.9)" : "rgba(255,255,255,0.28)",
+              color: highlighted ? "var(--accent-amber)" : "var(--graph-text-dim)",
               textAlign: "center",
               whiteSpace: "nowrap",
             }}
@@ -364,40 +361,40 @@ export default function DependencyGraph({ data }: { data: DependencyEdge[] }) {
         height: 500,
         borderRadius: 12,
         overflow: "hidden",
-        border: "1px solid rgba(255,184,0,0.15)",
-        background: GRAPH_BG,
+        border: "1px solid color-mix(in srgb, var(--accent-amber) 18%, transparent)",
+        background: "var(--graph-bg)",
       }}
     >
-      {/* Scoped overrides for React Flow Controls — always dark canvas */}
+      {/* Scoped React Flow controls inherit the active application theme. */}
       <style>{`
         .dep-graph-wrap .react-flow__controls {
-          background: #1c1f2e;
-          border: 1px solid rgba(255,184,0,0.22);
+          background: var(--graph-control-bg);
+          border: 1px solid color-mix(in srgb, var(--accent-amber) 25%, var(--graph-control-border));
           border-radius: 8px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+          box-shadow: 0 2px 10px var(--graph-shadow);
           overflow: hidden;
         }
         .dep-graph-wrap .react-flow__controls-button {
           background: transparent;
-          border-bottom: 1px solid rgba(255,255,255,0.07);
+          border-bottom: 1px solid var(--graph-control-divider);
           width: 26px;
           height: 26px;
           padding: 5px;
-          color: rgba(255,255,255,0.65);
+          color: var(--graph-control-icon);
         }
         .dep-graph-wrap .react-flow__controls-button:last-child {
           border-bottom: none;
         }
         .dep-graph-wrap .react-flow__controls-button svg {
-          fill: rgba(255,255,255,0.65);
+          fill: var(--graph-control-icon);
           max-width: 14px;
           max-height: 14px;
         }
         .dep-graph-wrap .react-flow__controls-button:hover {
-          background: rgba(255,184,0,0.12);
+          background: color-mix(in srgb, var(--accent-amber) 12%, transparent);
         }
         .dep-graph-wrap .react-flow__controls-button:hover svg {
-          fill: #FFB800;
+          fill: var(--accent-amber);
         }
         .dep-graph-wrap .react-flow__edge-path {
           stroke-dasharray: 6;
@@ -407,8 +404,8 @@ export default function DependencyGraph({ data }: { data: DependencyEdge[] }) {
           to { stroke-dashoffset: -12; }
         }
         .dep-graph-wrap .react-flow__minimap {
-          background: #0f1119;
-          border: 1px solid rgba(255,184,0,0.18);
+          background: var(--graph-minimap-bg);
+          border: 1px solid color-mix(in srgb, var(--accent-amber) 20%, transparent);
           border-radius: 8px;
           overflow: hidden;
         }
@@ -431,13 +428,13 @@ export default function DependencyGraph({ data }: { data: DependencyEdge[] }) {
           variant={BackgroundVariant.Dots}
           gap={28}
           size={1}
-          color="rgba(255,255,255,0.07)"
+          color="var(--graph-dot)"
         />
         <Controls />
         <MiniMap
-          nodeColor={() => "rgba(255,184,0,0.5)"}
-          maskColor="rgba(0,0,0,0.6)"
-          style={{ background: "#0f1119" }}
+          nodeColor={() => "color-mix(in srgb, var(--accent-amber) 55%, transparent)"}
+          maskColor="var(--graph-minimap-mask)"
+          style={{ background: "var(--graph-minimap-bg)" }}
         />
       </ReactFlow>
     </div>

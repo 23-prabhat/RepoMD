@@ -129,7 +129,7 @@ const CONFIG_FILES = new Set([
 const NEXT_CONFIG_PATTERN = /^next\.config\./;
 const README_PATTERN = /^README/i;
 
-export function selectPriorityFiles(tree: GitHubTreeResponse, maxFiles = 28): string[] {
+export function selectPriorityFiles(tree: GitHubTreeResponse, maxFiles = 35): string[] {
   const blobs = tree.tree.filter(
     (item): item is GitHubTreeItem & { type: "blob" } =>
       item.type === "blob" && (item.size ?? 0) <= 100_000
@@ -172,7 +172,7 @@ export function selectPriorityFiles(tree: GitHubTreeResponse, maxFiles = 28): st
     tier4Count++;
   }
 
-  // Tier 5: one representative file per unique top-level directory (max 9)
+  // Tier 5: one representative file per unique top-level directory (max 16)
   const seenDirs = new Set<string>();
   let tier5Count = 0;
   for (const f of blobs) {
@@ -181,10 +181,17 @@ export function selectPriorityFiles(tree: GitHubTreeResponse, maxFiles = 28): st
     if (parts.length < 2) continue;
     const topDir = parts[0];
     if (seenDirs.has(topDir)) continue;
-    if (tier5Count >= 9) break;
+    if (tier5Count >= 16 || selected.size >= maxFiles) break;
     seenDirs.add(topDir);
     selected.add(f.path);
     tier5Count++;
+  }
+
+  // Tier 6: fill any remaining slots with eligible source files. This lets
+  // repositories with fewer top-level directories still reach the file cap.
+  for (const f of blobs) {
+    if (selected.size >= maxFiles) break;
+    selected.add(f.path);
   }
 
   return Array.from(selected).slice(0, maxFiles);

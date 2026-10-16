@@ -149,7 +149,7 @@
   <g>
     <rect x="485" y="510" width="190" height="90" rx="14" fill="#10251f" stroke="#275e4e"/>
     <text x="505" y="540" class="cardSub" fill="#39ff14">A · INGEST</text>
-    <text x="505" y="567" class="body">Max 28 priority files</text>
+    <text x="505" y="567" class="body">Max 35 priority files</text>
     <text x="505" y="586" class="small">≤100 KB each</text>
 
     <rect x="715" y="510" width="190" height="90" rx="14" fill="#10251f" stroke="#275e4e"/>

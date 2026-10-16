@@ -55,9 +55,6 @@ function shortName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-const GRAPH_BG       = "#0b0d14";
-const NODE_BG        = "#151824";
-
 // ── Dagre layout ─────────────────────────────────────────────────────────────
 
 function getArchLayoutedElements(
@@ -132,7 +129,7 @@ function ArchLayerNode({ data }: { data: LayerNodeData }) {
       style={{
         width: LAYER_NODE_W,
         height: LAYER_NODE_H,
-        background: `linear-gradient(135deg, color-mix(in srgb, ${color} 12%, #0b0d14) 0%, color-mix(in srgb, ${color} 5%, #0b0d14) 100%)`,
+        background: `linear-gradient(135deg, color-mix(in srgb, ${color} 12%, var(--graph-bg)) 0%, color-mix(in srgb, ${color} 5%, var(--graph-bg)) 100%)`,
         border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
         borderLeft: `3px solid ${color}`,
         borderRadius: 8,
@@ -188,7 +185,7 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
   const topBorderColor = isCritical ? categoryColor : layerColor;
   const sideBorderColor = highlighted
     ? (isCritical ? categoryColor : layerColor)
-    : "rgba(255,255,255,0.10)";
+    : "var(--graph-node-border)";
 
   return (
     <>
@@ -197,7 +194,7 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
         style={{
           width: FILE_NODE_W,
           height: FILE_NODE_H,
-          background: NODE_BG,
+          background: "var(--graph-node-bg)",
           border: `1px solid ${sideBorderColor}`,
           borderTop: `3px solid ${topBorderColor}`,
           borderRadius: 8,
@@ -219,7 +216,7 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
             fontFamily: "var(--font-geist-mono, monospace)",
             fontSize: 11,
             fontWeight: 700,
-            color: "rgba(255,255,255,0.92)",
+            color: "var(--graph-text)",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -231,7 +228,7 @@ function ArchFileNode({ data }: { data: FileNodeData }) {
           style={{
             fontFamily: "var(--font-geist-mono, monospace)",
             fontSize: 9,
-            color: `color-mix(in srgb, ${layerColor} 55%, rgba(255,255,255,0.3))`,
+            color: `color-mix(in srgb, ${layerColor} 55%, var(--graph-text-muted))`,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -515,36 +512,36 @@ export default function ArchitectureGraph({
         height: 580,
         borderRadius: 14,
         overflow: "hidden",
-        border: "1px solid rgba(255,107,157,0.15)",
-        background: GRAPH_BG,
+        border: "1px solid color-mix(in srgb, var(--accent-rose) 18%, transparent)",
+        background: "var(--graph-bg)",
       }}
     >
       <style>{`
         .arch-graph-wrap .react-flow__controls {
-          background: #1c1f2e;
-          border: 1px solid rgba(255,107,157,0.22);
+          background: var(--graph-control-bg);
+          border: 1px solid color-mix(in srgb, var(--accent-rose) 25%, var(--graph-control-border));
           border-radius: 8px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+          box-shadow: 0 2px 10px var(--graph-shadow);
           overflow: hidden;
         }
         .arch-graph-wrap .react-flow__controls-button {
           background: transparent;
-          border-bottom: 1px solid rgba(255,255,255,0.07);
+          border-bottom: 1px solid var(--graph-control-divider);
           width: 26px;
           height: 26px;
           padding: 5px;
-          color: rgba(255,255,255,0.65);
+          color: var(--graph-control-icon);
         }
         .arch-graph-wrap .react-flow__controls-button:last-child {
           border-bottom: none;
         }
         .arch-graph-wrap .react-flow__controls-button svg {
-          fill: rgba(255,255,255,0.65);
+          fill: var(--graph-control-icon);
           max-width: 14px;
           max-height: 14px;
         }
         .arch-graph-wrap .react-flow__controls-button:hover {
-          background: rgba(255,107,157,0.12);
+          background: color-mix(in srgb, var(--accent-rose) 12%, transparent);
         }
         .arch-graph-wrap .react-flow__controls-button:hover svg {
           fill: var(--accent-rose, #FF6B9D);
@@ -573,20 +570,20 @@ export default function ArchitectureGraph({
           variant={BackgroundVariant.Dots}
           gap={28}
           size={1}
-          color="rgba(255,255,255,0.07)"
+          color="var(--graph-dot)"
         />
         <Controls />
         <MiniMap
-          nodeColor={() => "rgba(255,107,157,0.5)"}
-          maskColor="rgba(0,0,0,0.6)"
-          style={{ background: "#0f1119" }}
+          nodeColor={() => "color-mix(in srgb, var(--accent-rose) 55%, transparent)"}
+          maskColor="var(--graph-minimap-mask)"
+          style={{ background: "var(--graph-minimap-bg)" }}
         />
         <Panel position="top-right">
           <div
             style={{
-              background: "rgba(11,13,20,0.88)",
+              background: "var(--graph-panel-bg)",
               backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--graph-node-border)",
               borderRadius: 8,
               padding: "10px 14px",
               display: "flex",
@@ -599,7 +596,7 @@ export default function ArchitectureGraph({
                 fontFamily: "var(--font-geist-mono, monospace)",
                 fontSize: 9,
                 letterSpacing: "0.1em",
-                color: "rgba(255,255,255,0.35)",
+                color: "var(--graph-text-dim)",
                 textTransform: "uppercase",
                 marginBottom: 2,
               }}
@@ -623,7 +620,7 @@ export default function ArchitectureGraph({
                     style={{
                       fontFamily: "var(--font-geist-mono, monospace)",
                       fontSize: 10,
-                      color: "rgba(255,255,255,0.6)",
+                      color: "var(--graph-text-muted)",
                       whiteSpace: "nowrap",
                     }}
                   >

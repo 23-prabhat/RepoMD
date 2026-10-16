@@ -98,6 +98,21 @@ html {
   --input-border:   rgba(0,0,0,0.10);
   --dot-color:      rgba(0,0,0,0.055);
   --shadow-card:    rgba(0,0,0,0.15);
+  --graph-bg:              #f7f9fc;
+  --graph-node-bg:         #ffffff;
+  --graph-node-border:     rgba(7,9,15,0.12);
+  --graph-text:            rgba(7,9,15,0.90);
+  --graph-text-muted:      rgba(7,9,15,0.48);
+  --graph-text-dim:        rgba(7,9,15,0.30);
+  --graph-dot:             rgba(7,9,15,0.10);
+  --graph-control-bg:      #ffffff;
+  --graph-control-border:  rgba(7,9,15,0.12);
+  --graph-control-icon:    rgba(7,9,15,0.65);
+  --graph-control-divider: rgba(7,9,15,0.08);
+  --graph-minimap-bg:      #f1f4f8;
+  --graph-minimap-mask:    rgba(240,242,247,0.62);
+  --graph-panel-bg:        rgba(255,255,255,0.90);
+  --graph-shadow:          rgba(7,9,15,0.14);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -179,6 +194,21 @@ html {
   --input-border:   rgba(255,255,255,0.10);
   --dot-color:      rgba(255,255,255,0.055);
   --shadow-card:    rgba(0,0,0,0.40);
+  --graph-bg:              #0b0d14;
+  --graph-node-bg:         #151824;
+  --graph-node-border:     rgba(255,255,255,0.10);
+  --graph-text:            rgba(255,255,255,0.92);
+  --graph-text-muted:      rgba(255,255,255,0.45);
+  --graph-text-dim:        rgba(255,255,255,0.28);
+  --graph-dot:             rgba(255,255,255,0.07);
+  --graph-control-bg:      #1c1f2e;
+  --graph-control-border:  rgba(255,255,255,0.10);
+  --graph-control-icon:    rgba(255,255,255,0.65);
+  --graph-control-divider: rgba(255,255,255,0.07);
+  --graph-minimap-bg:      #0f1119;
+  --graph-minimap-mask:    rgba(0,0,0,0.60);
+  --graph-panel-bg:        rgba(11,13,20,0.88);
+  --graph-shadow:          rgba(0,0,0,0.50);
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

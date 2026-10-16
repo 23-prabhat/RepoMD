@@ -7,6 +7,9 @@ import {
 import type { AnalysisResult, FetchedFile, RepoContext } from "./types";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
+const MAX_ANALYSIS_FILES = 35;
+const FULL_CONTEXT_BUDGET = 14_000;
+const COMPACT_CONTEXT_BUDGET = 7_000;
 
 function getGroqClient(): Groq {
   const apiKey = process.env.GROQ_API_KEY?.trim();
@@ -134,7 +137,11 @@ const responseJsonSchema = {
   ],
 };
 
-function buildPrompt(context: RepoContext, files: FetchedFile[], contextBudget = 8_000): string {
+function buildPrompt(
+  context: RepoContext,
+  files: FetchedFile[],
+  contextBudget = FULL_CONTEXT_BUDGET
+): string {
   const { repo, treeText, treeTruncated } = context;
 
   const metaSection = [
@@ -151,7 +158,7 @@ function buildPrompt(context: RepoContext, files: FetchedFile[], contextBudget =
     ? `${treeText.slice(0, treeLimit)}\n... (tree truncated)`
     : treeText;
 
-  const selectedFiles = files.slice(0, 20);
+  const selectedFiles = files.slice(0, MAX_ANALYSIS_FILES);
   const perFileLimit = Math.floor((contextBudget - treeLimit) / Math.max(selectedFiles.length, 1));
   const filesSection = selectedFiles
     .map((f) => {
@@ -200,7 +207,7 @@ Be concise: use at most 8 items per array and short descriptions. Return all six
 async function analyzeWithGroq(
   context: RepoContext,
   files: FetchedFile[],
-  contextBudget = 8_000
+  contextBudget = FULL_CONTEXT_BUDGET
 ): Promise<AnalysisResult> {
   const prompt = buildPrompt(context, files, contextBudget);
 
@@ -237,7 +244,7 @@ async function analyzeWithGroq(
 async function analyzeWithOpenCode(
   context: RepoContext,
   files: FetchedFile[],
-  contextBudget = 8_000
+  contextBudget = FULL_CONTEXT_BUDGET
 ): Promise<AnalysisResult> {
   const text = await completeWithOpenCode({
     messages: [
@@ -281,7 +288,7 @@ async function runAnalysis(
     return await provider(context, files);
   } catch (error) {
     if (shouldRetryWithCompactContext(error)) {
-      return provider(context, files, 4_000);
+      return provider(context, files, COMPACT_CONTEXT_BUDGET);
     }
     throw error;
   }

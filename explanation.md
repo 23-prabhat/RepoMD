@@ -156,9 +156,10 @@ RepoMD selects evidence before invoking AI. Current tiers are:
 2. Up to five configuration files.
 3. One README.
 4. Up to ten root-level or direct `src/` files.
-5. Up to nine representative files from unique top-level directories.
+5. Up to sixteen representative files from unique top-level directories.
+6. Additional eligible source files when needed to fill the 35-file limit.
 
-The total selection is capped at 28 files, and files above 100 KB are excluded.
+The total selection is capped at 35 files, and files above 100 KB are excluded.
 
 ### Step 5: Context construction
 
@@ -169,7 +170,7 @@ RepoMD combines:
 - Selected source excerpts
 - Explicit output requirements
 
-Only the first 20 fetched files are used in the main prompt. Each excerpt is bounded by line count and context allocation.
+Up to 35 fetched files are used in the main prompt. Each excerpt is bounded by line count and context allocation.
 
 ### Step 6: Structured analysis
 
@@ -276,14 +277,14 @@ These rules should remain true as RepoMD grows:
 
 | Limit | Value |
 | --- | --- |
-| Selected files | Maximum 28 |
+| Selected files | Maximum 35 |
 | Selected file size | Maximum 100 KB |
 | GitHub fetch batch | 10 files |
-| Prompt files | First 20 fetched files |
+| Prompt files | Up to 35 fetched files |
 | Source excerpt | First 150 lines, also bounded by context allocation |
 | Tree paths | First 500 files |
-| Full context budget | Approximately 8,000 characters before allocation |
-| Compact retry | Approximately 4,000 characters |
+| Full context budget | Approximately 14,000 characters before allocation |
+| Compact retry | Approximately 7,000 characters |
 | Requested array length | Maximum 8 items per section |
 | GitHub timeout | 15 seconds |
 | AI timeout | 60 seconds |
