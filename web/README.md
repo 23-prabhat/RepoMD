@@ -6,12 +6,10 @@ Create a `.env.local` file with the server-side API keys:
 
 ```bash
 GROQ_API_KEY=your_groq_api_key
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODELS=gemini-2.5-flash,gemini-1.5-flash
 GITHUB_TOKEN=your_github_token
 ```
 
-`GROQ_API_KEY` is the primary provider for repository analysis and RepoChat. If Groq is unavailable, rate-limited, or returns an error, the app tries each comma-separated model in `GEMINI_MODELS` in order. It defaults to `gemini-2.5-flash,gemini-1.5-flash`. The older singular `GEMINI_MODEL` variable is still supported. At least one AI provider key is required. `GITHUB_TOKEN` is optional, but recommended to avoid GitHub's low unauthenticated rate limit.
+`GROQ_API_KEY` is required for repository analysis and RepoChat. `GITHUB_TOKEN` is optional, but recommended to avoid GitHub's low unauthenticated rate limit.
 
 Then install dependencies and run the development server:
 

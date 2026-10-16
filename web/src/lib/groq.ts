@@ -1,6 +1,5 @@
 import Groq from "groq-sdk";
 import type { AnalysisResult, FetchedFile, RepoContext } from "./types";
-import { generateWithGemini } from "./gemini";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 
@@ -230,52 +229,24 @@ async function analyzeWithGroq(
   return JSON.parse(text) as AnalysisResult;
 }
 
-async function analyzeWithGemini(
-  context: RepoContext,
-  files: FetchedFile[]
-): Promise<AnalysisResult> {
-  const text = await generateWithGemini({
-    systemInstruction:
-      "You are a senior software architect. Return only the requested structured analysis.",
-    prompt: buildPrompt(context, files),
-    responseJsonSchema: responseJsonSchema,
-    temperature: 0.2,
-    maxOutputTokens: 8_192,
-  });
-
-  return JSON.parse(text) as AnalysisResult;
-}
-
 export async function analyzeRepository(
   context: RepoContext,
   files: FetchedFile[]
 ): Promise<AnalysisResult> {
-  let primaryError: unknown;
-  if (process.env.GROQ_API_KEY) {
-    try {
-      return await analyzeWithGroq(context, files);
-    } catch (error) {
-      primaryError = error;
-      console.warn("[ai] Primary analysis failed", error);
-      // Retry once with a smaller context for request-size or structured-output failures.
-      if (error instanceof Groq.APIError &&
-          (error.status === 413 || (error.status === 400 && error.message.includes("json_validate_failed")))) {
-        try {
-          return await analyzeWithGroq(context, files, 4_000);
-        } catch (retryError) {
-          primaryError = retryError;
-          console.warn("[ai] Compact analysis retry failed", retryError);
-        }
+  try {
+    return await analyzeWithGroq(context, files);
+  } catch (error) {
+    console.warn("[ai] Analysis failed", error);
+    // Retry once with a smaller context for request-size or structured-output failures.
+    if (error instanceof Groq.APIError &&
+        (error.status === 413 || (error.status === 400 && error.message.includes("json_validate_failed")))) {
+      try {
+        return await analyzeWithGroq(context, files, 4_000);
+      } catch (retryError) {
+        console.warn("[ai] Compact analysis retry failed", retryError);
+        throw retryError;
       }
     }
+    throw error;
   }
-
-  if (!process.env.GEMINI_API_KEY) {
-    if (primaryError) throw primaryError;
-    throw new Error(
-      "No AI provider is available. Configure GEMINI_API_KEY or GROQ_API_KEY."
-    );
-  }
-
-  return analyzeWithGemini(context, files);
 }

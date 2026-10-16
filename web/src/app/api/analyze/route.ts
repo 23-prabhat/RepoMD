@@ -123,7 +123,7 @@ export async function POST(request: Request): Promise<Response> {
 
         console.log(`[analyze] Fetched ${files.length}/${priorityPaths.length} files — sending to AI provider`);
 
-        // 4. Analyze with Groq, falling back to Gemini when needed
+        // 4. Analyze the repository
         send({ stage: "analyzing", progress: 70, detail: "AI is analyzing the codebase..." });
         const context = buildRepoContext(meta, tree);
 

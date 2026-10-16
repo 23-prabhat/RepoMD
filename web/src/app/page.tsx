@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Sun, Moon } from "lucide-react";
 import { useTheme } from "@/lib/theme-provider";
 
@@ -380,10 +381,14 @@ export default function Home() {
               onClick={() => scrollToSection("home")}
               className="flex shrink-0 cursor-pointer items-center justify-self-start gap-1.5"
             >
-              <span className="font-syne text-xl font-extrabold tracking-tight text-white">Repo</span>
-              <span className="font-syne text-xl font-extrabold tracking-tight" style={{ color: "var(--accent-green)" }}>
-                MD
-              </span>
+              <Image
+                src="/repomd-logo.png"
+                alt="RepoMD"
+                width={568}
+                height={227}
+                priority
+                className="h-9 w-auto sm:h-10"
+              />
               <span
                 className="tag-badge ml-2"
                 style={{ background: "color-mix(in srgb, var(--accent-green) 10%, transparent)", color: "var(--accent-green)", border: "1px solid color-mix(in srgb, var(--accent-green) 22%, transparent)" }}

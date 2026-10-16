@@ -1,6 +1,5 @@
 import Groq from "groq-sdk";
 import type { AnalysisResult } from "@/lib/types";
-import { generateWithGemini } from "@/lib/gemini";
 
 export const dynamic = "force-dynamic";
 
@@ -61,18 +60,7 @@ ${JSON.stringify(analysis, null, 2)}
 Answer the user's question concisely. If the answer can be found in the analysis data, use it.
 If you refer to specific files, quote their paths. Keep responses under 200 words unless a longer answer is clearly needed. Do not hallucinate details not present in the analysis.`;
 
-    let text: string;
-    try {
-      text = await chatWithGroq(systemPrompt, message);
-    } catch (error) {
-      console.warn("[ai] Groq chat failed; trying Gemini fallback", error);
-      text = await generateWithGemini({
-        systemInstruction: systemPrompt,
-        prompt: message,
-        temperature: 0.7,
-        maxOutputTokens: 800,
-      });
-    }
+    const text = await chatWithGroq(systemPrompt, message);
 
     return Response.json({ reply: text });
   } catch {

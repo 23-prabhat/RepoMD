@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import {
   Sun, Moon, Download, FileText, Layers, Code2, LogIn,
   Lock, Database, Globe, Settings, Cpu, GitBranch, Shield,
@@ -763,13 +765,13 @@ export default function ResultsPage() {
           >
             No analysis data found.
           </p>
-          <a
+          <Link
             href="/"
             className="text-sm"
             style={{ color: C.green, fontFamily: "var(--font-geist-mono)", textDecoration: "underline" }}
           >
             ← Analyze a repository
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -1038,15 +1040,19 @@ export default function ResultsPage() {
             borderBottom: "1px solid var(--border-faint)",
           }}
         >
-          <a
+          <Link
             href="/"
-            className="text-xs shrink-0"
-            style={{ color: "var(--text-35)", fontFamily: "var(--font-geist-mono)", transition: "color 0.15s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-70)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-35)")}
+            className="shrink-0"
+            aria-label="RepoMD home"
           >
-            ← back
-          </a>
+            <Image
+              src="/repomd-logo.png"
+              alt="RepoMD"
+              width={568}
+              height={227}
+              className="h-8 w-auto sm:h-9"
+            />
+          </Link>
           <div
             style={{ width: 1, height: 16, background: "var(--input-border)" }}
           />

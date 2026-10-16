@@ -43,7 +43,7 @@ add a chat feature on the results page so users can ask questions about the repo
 build the analyze endpoint for a github repo intelligence tool in src/app/api
 
   flow is: user pastes a github url -> we fetch the repo -> pick the most
-  useful files -> dump everything into gemini -> get back structured analysis
+  useful files -> send relevant context to the analysis service -> get back structured analysis
 
   github api plan:
   - first hit /repos/{owner}/{repo} for metadata (language, stars, default branch)
