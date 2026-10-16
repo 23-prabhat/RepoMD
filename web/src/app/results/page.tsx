@@ -1050,7 +1050,14 @@ export default function ResultsPage() {
               alt="RepoMD"
               width={568}
               height={227}
-              className="h-8 w-auto sm:h-9"
+              className="brand-logo-light h-8 w-auto sm:h-9"
+            />
+            <Image
+              src="/repomd-logo-dark.png"
+              alt="RepoMD"
+              width={568}
+              height={227}
+              className="brand-logo-dark h-8 w-auto sm:h-9"
             />
           </Link>
           <div

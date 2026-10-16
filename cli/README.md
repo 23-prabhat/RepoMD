@@ -1,6 +1,6 @@
 # RepoMD CLI
 
-RepoMD CLI is the terminal interface for the RepoMD web analysis service. The web service keeps the Groq key and performs repository analysis and chat; the CLI detects the current GitHub repository, streams progress, saves local artifacts, and provides an interactive chat.
+RepoMD CLI is the terminal interface for the RepoMD web analysis service. The web service keeps the provider keys, uses OpenCode Zen first and Groq as fallback, and performs repository analysis and chat. The CLI detects the current GitHub repository, streams progress, saves local artifacts, and provides an interactive chat.
 
 ## Personal setup
 

@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Interactive presentation of the RepoMD system architecture." />
+  <title>RepoMD — System Architecture</title>
+  <link rel="icon" href="./web/src/app/icon.png" type="image/png" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050908;
+      --surface: #08120f;
+      --surface-2: #0c1a16;
+      --surface-3: #10251f;
+      --line: #21473b;
+      --line-soft: rgba(114, 229, 189, 0.14);
+      --text: #f4fff9;
+      --muted: #9bb8ae;
+      --dim: #68847b;
+      --green: #39ff14;
+      --mint: #20c997;
+      --cyan: #00d4ff;
+      --amber: #ffb800;
+      --rose: #ff6b9d;
+      --radius: 18px;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(57, 255, 20, 0.055), transparent 28rem),
+        radial-gradient(circle at 88% 30%, rgba(0, 212, 255, 0.045), transparent 30rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: inherit; }
+
+    .skip-link {
+      position: fixed;
+      left: 12px;
+      top: -80px;
+      z-index: 100;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--green);
+      color: #06100d;
+      font-weight: 800;
+    }
+
+    .skip-link:focus { top: 12px; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      border-bottom: 1px solid rgba(114, 229, 189, 0.11);
+      background: rgba(5, 9, 8, 0.86);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar-inner {
+      width: min(1460px, calc(100% - 32px));
+      min-height: 68px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-weight: 850;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(57, 255, 20, 0.55);
+      border-radius: 11px;
+      color: var(--green);
+      background: rgba(57, 255, 20, 0.06);
+      box-shadow: inset 0 0 18px rgba(57, 255, 20, 0.035);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 15px;
+    }
+
+    .brand small {
+      margin-left: 4px;
+      color: var(--dim);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .topnav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topnav a {
+      padding: 8px 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .topnav a:hover,
+    .topnav a:focus-visible {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.045);
+      outline: none;
+    }
+
+    .page {
+      width: min(1460px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 76px 0 44px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+      gap: 50px;
+      align-items: end;
+    }
+
+    .eyebrow,
+    .section-label {
+      color: var(--green);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      max-width: 930px;
+      margin: 14px 0 18px;
+      font-size: clamp(42px, 6vw, 82px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .hero h1 span { color: var(--green); }
+
+    .hero-copy {
+      max-width: 760px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(16px, 2vw, 20px);
+    }
+
+    .hero-actions {
+      margin-top: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: var(--surface-2);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 750;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      border-color: var(--mint);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .button.primary {
+      border-color: var(--green);
+      color: #06100d;
+      background: var(--green);
+    }
+
+    .summary-card {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(16, 42, 34, 0.95), rgba(7, 17, 15, 0.96));
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card h2 {
+      margin: 0 0 18px;
+      font-size: 16px;
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 13px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .summary-list li {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .summary-list b {
+      color: var(--green);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .metric-grid {
+      margin-bottom: 34px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 18px 20px;
+      border: 1px solid var(--line-soft);
+      border-radius: 14px;
+      background: rgba(8, 18, 15, 0.72);
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--green);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 7px;
+      color: var(--dim);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .diagram-shell {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+      background: #040807;
+      box-shadow: var(--shadow);
+    }
+
+    .diagram-toolbar {
+      min-height: 58px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line-soft);
+      background: rgba(12, 26, 22, 0.9);
+    }
+
+    .diagram-title {
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.7);
+    }
+
+    .tool-button {
+      min-width: 36px;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      background: #08130f;
+      font: 750 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+      cursor: pointer;
+    }
+
+    .tool-button:hover,
+    .tool-button:focus-visible {
+      color: var(--text);
+      border-color: var(--mint);
+      outline: none;
+    }
+
+    #zoom-readout { min-width: 58px; }
+
+    .diagram-viewport {
+      min-height: 640px;
+      max-height: 82vh;
+      overflow: auto;
+      display: grid;
+      place-items: start center;
+      padding: 20px;
+      background:
+        linear-gradient(rgba(32, 201, 151, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(32, 201, 151, 0.025) 1px, transparent 1px),
+        #040807;
+      background-size: 28px 28px;
+    }
+
+    .diagram-viewport img {
+      display: block;
+      width: 1600px;
+      max-width: none;
+      height: auto;
+      border-radius: 12px;
+      user-select: none;
+      transition: width 160ms ease;
+    }
+
+    .diagram-shell:fullscreen {
+      border: 0;
+      border-radius: 0;
+      background: #040807;
+    }
+
+    .diagram-shell:fullscreen .diagram-viewport {
+      max-height: calc(100vh - 58px);
+      min-height: calc(100vh - 58px);
+    }
+
+    section.content-section {
+      padding: 92px 0 0;
+      scroll-margin-top: 76px;
+    }
+
+    .section-heading {
+      max-width: 850px;
+      margin: 10px 0 30px;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.07;
+      letter-spacing: -0.04em;
+    }
+
+    .section-intro {
+      max-width: 860px;
+      margin: -16px 0 34px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .info-card {
+      min-height: 210px;
+      padding: 24px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: linear-gradient(150deg, rgba(12, 26, 22, 0.92), rgba(7, 16, 13, 0.94));
+    }
+
+    .card-index {
+      display: inline-grid;
+      min-width: 34px;
+      height: 26px;
+      place-items: center;
+      padding: 0 8px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      color: var(--green);
+      font: 800 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .info-card h3 {
+      margin: 18px 0 10px;
+      font-size: 20px;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .flow::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 25px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--cyan), var(--green), var(--amber));
+      opacity: 0.38;
+    }
+
+    .flow-step {
+      position: relative;
+      padding: 0 10px;
+      text-align: center;
+    }
+
+    .flow-step b {
+      position: relative;
+      z-index: 1;
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--mint);
+      border-radius: 50%;
+      color: #06100d;
+      background: var(--green);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .flow-step h3 { margin: 0 0 7px; font-size: 16px; }
+    .flow-step p { margin: 0; color: var(--dim); font-size: 13px; }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .product-card {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .product-card.web { border-top: 3px solid var(--cyan); }
+    .product-card.cli { border-top: 3px solid var(--green); }
+    .product-card h3 { margin: 10px 0 10px; font-size: 25px; }
+    .product-card p { color: var(--muted); }
+    .product-card ul { margin: 18px 0 0; padding-left: 20px; color: var(--muted); }
+    .product-card code { color: var(--green); }
+
+    .failover {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .provider {
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+    }
+
+    .provider.primary { border-color: rgba(57, 255, 20, 0.48); }
+    .provider.fallback { border-color: rgba(255, 184, 0, 0.48); }
+    .provider h3 { margin: 8px 0; font-size: 24px; }
+    .provider p { margin: 0; color: var(--muted); }
+
+    .arrow-card {
+      min-width: 130px;
+      display: grid;
+      place-items: center;
+      color: var(--amber);
+      font: 800 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+      text-align: center;
+    }
+
+    .arrow-card span {
+      display: block;
+      font-size: 36px;
+      line-height: 1;
+    }
+
+    .rule-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: rules;
+    }
+
+    .rule-list li {
+      position: relative;
+      min-height: 92px;
+      padding: 20px 20px 20px 64px;
+      border: 1px solid var(--line-soft);
+      border-radius: 14px;
+      color: var(--muted);
+      background: rgba(8, 18, 15, 0.78);
+      counter-increment: rules;
+    }
+
+    .rule-list li::before {
+      content: counter(rules, decimal-leading-zero);
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      color: var(--green);
+      font: 800 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .rule-list strong { color: var(--text); }
+
+    .stack-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(8, 18, 15, 0.76);
+    }
+
+    .stack-table th,
+    .stack-table td {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      text-align: left;
+    }
+
+    .stack-table th {
+      color: var(--green);
+      background: rgba(16, 37, 31, 0.8);
+      font: 800 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stack-table td { color: var(--muted); font-size: 14px; }
+    .stack-table td:first-child { color: var(--text); font-weight: 700; }
+    .stack-table tr:last-child td { border-bottom: 0; }
+
+    .talk-track {
+      padding: 34px;
+      border: 1px solid rgba(57, 255, 20, 0.35);
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(16, 42, 34, 0.9), rgba(7, 17, 15, 0.95));
+      box-shadow: var(--shadow);
+    }
+
+    .talk-track blockquote {
+      margin: 0;
+      color: #dff8ef;
+      font-size: clamp(18px, 2.2vw, 25px);
+      line-height: 1.55;
+    }
+
+    .talk-track footer {
+      margin-top: 18px;
+      color: var(--green);
+      font: 750 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .page-footer {
+      margin-top: 110px;
+      padding: 28px 0 42px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--dim);
+      font-size: 13px;
+    }
+
+    .page-footer a { margin-left: auto; color: var(--green); }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+      .metric-grid, .card-grid { grid-template-columns: repeat(2, 1fr); }
+      .flow { grid-template-columns: 1fr; gap: 16px; }
+      .flow::before { display: none; }
+      .flow-step { display: grid; grid-template-columns: 50px 1fr; gap: 16px; text-align: left; }
+      .flow-step b { grid-row: span 2; margin: 0; }
+      .flow-step h3 { align-self: end; }
+      .failover { grid-template-columns: 1fr; }
+      .arrow-card { min-height: 80px; }
+      .arrow-card span { transform: rotate(90deg); }
+    }
+
+    @media (max-width: 700px) {
+      .topnav a:not(:last-child), .brand small { display: none; }
+      .hero { padding-top: 52px; }
+      .metric-grid, .card-grid, .split, .rule-list { grid-template-columns: 1fr; }
+      .diagram-toolbar { flex-wrap: wrap; }
+      .diagram-title { width: 100%; }
+      .diagram-viewport { min-height: 460px; }
+      .stack-table { display: block; overflow-x: auto; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; }
+    }
+
+    @media print {
+      :root { color-scheme: light; }
+      body { color: #111; background: #fff; }
+      .topbar, .hero-actions, .diagram-toolbar, .metric-grid { display: none; }
+      .page { width: 100%; }
+      .hero { padding: 20px 0; grid-template-columns: 1fr; }
+      .hero h1, .section-heading, .info-card h3, .product-card h3, .provider h3 { color: #111; }
+      .hero-copy, .section-intro, .info-card p, .product-card p, .provider p, .rule-list li, .stack-table td { color: #333; }
+      .diagram-shell { border: 0; box-shadow: none; }
+      .diagram-viewport { min-height: auto; max-height: none; overflow: visible; padding: 0; background: #fff; }
+      .diagram-viewport img { width: 100% !important; }
+      section.content-section { padding-top: 42px; break-inside: avoid; }
+      .info-card, .product-card, .provider, .talk-track, .rule-list li { box-shadow: none; break-inside: avoid; }
+      .page-footer { margin-top: 50px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#architecture">Skip to architecture</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="RepoMD architecture home">
+        <span class="brand-mark">R/</span>
+        <span>RepoMD <small>Architecture briefing</small></span>
+      </a>
+      <nav class="topnav" aria-label="Presentation sections">
+        <a href="#architecture">Diagram</a>
+        <a href="#flow">Flow</a>
+        <a href="#rules">Rules</a>
+        <a href="#stack">Stack</a>
+        <a href="./explanation.md">Explanation ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top" class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <div class="eyebrow">Judge presentation · system design</div>
+        <h1 id="page-title">One analysis engine.<br><span>Two product experiences.</span></h1>
+        <p class="hero-copy">RepoMD converts a GitHub repository into structured architecture intelligence through a browser product and a terminal product backed by the same secure server API.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#architecture">View architecture ↓</a>
+          <a class="button" href="./architecture.svg" download>Download SVG</a>
+          <a class="button" href="./explanation.md">Read explanation</a>
+          <button class="button" type="button" onclick="window.print()">Print briefing</button>
+        </div>
+      </div>
+      <aside class="summary-card" aria-label="Architecture summary">
+        <h2>What judges should remember</h2>
+        <ul class="summary-list">
+          <li><b>01</b><span>Web and CLI share one structured analysis contract.</span></li>
+          <li><b>02</b><span>Repository access and provider credentials stay server-side.</span></li>
+          <li><b>03</b><span>Bounded source sampling keeps analysis practical.</span></li>
+          <li><b>04</b><span>Automatic provider fallback preserves the user experience.</span></li>
+        </ul>
+      </aside>
+    </section>
+
+    <div class="metric-grid" aria-label="Architecture metrics">
+      <div class="metric"><strong>2</strong><span>Product interfaces</span></div>
+      <div class="metric"><strong>1</strong><span>Shared API contract</span></div>
+      <div class="metric"><strong>6</strong><span>Analysis sections</span></div>
+      <div class="metric"><strong>0</strong><span>Central databases</span></div>
+    </div>
+
+    <section id="architecture" class="diagram-shell" aria-label="Interactive architecture diagram">
+      <div class="diagram-toolbar">
+        <div class="diagram-title"><span class="live-dot"></span> architecture.svg</div>
+        <button id="zoom-out" class="tool-button" type="button" aria-label="Zoom out">−</button>
+        <button id="zoom-readout" class="tool-button" type="button" aria-label="Reset diagram to fit">100%</button>
+        <button id="zoom-in" class="tool-button" type="button" aria-label="Zoom in">+</button>
+        <button id="fullscreen" class="tool-button" type="button">Fullscreen</button>
+      </div>
+      <div id="diagram-viewport" class="diagram-viewport">
+        <img id="diagram" src="./architecture.svg" width="1600" height="1100" alt="RepoMD system architecture showing browser and CLI clients, Next.js APIs, GitHub ingestion, the structured analysis pipeline, and primary and fallback AI engines." />
+      </div>
+    </section>
+
+    <section class="content-section" aria-labelledby="layers-title">
+      <div class="section-label">Component map</div>
+      <h2 id="layers-title" class="section-heading">Three boundaries keep the system easy to explain.</h2>
+      <div class="card-grid">
+        <article class="info-card">
+          <span class="card-index">01</span>
+          <h3>User surfaces</h3>
+          <p>The browser provides visual exploration and PDF export. The CLI runs inside a repository, saves local artifacts, and opens repository chat.</p>
+        </article>
+        <article class="info-card">
+          <span class="card-index">02</span>
+          <h3>RepoMD server</h3>
+          <p>The Next.js API owns GitHub access, source selection, prompt construction, structured validation, provider routing, and client-safe errors.</p>
+        </article>
+        <article class="info-card">
+          <span class="card-index">03</span>
+          <h3>External services</h3>
+          <p>GitHub supplies repository evidence. OpenCode Zen handles the primary analysis, while Groq provides automatic fallback.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="flow" class="content-section" aria-labelledby="flow-title">
+      <div class="section-label">End-to-end request</div>
+      <h2 id="flow-title" class="section-heading">From repository URL to explainable architecture.</h2>
+      <p class="section-intro">The same flow serves both products. Only the presentation and local output differ.</p>
+      <div class="flow">
+        <article class="flow-step"><b>1</b><h3>Input</h3><p>URL from web or detected Git remote from CLI.</p></article>
+        <article class="flow-step"><b>2</b><h3>Ingest</h3><p>Metadata, tree, and selected source files from GitHub.</p></article>
+        <article class="flow-step"><b>3</b><h3>Bound</h3><p>Cap file count, size, source excerpts, and context.</p></article>
+        <article class="flow-step"><b>4</b><h3>Analyze</h3><p>Request the strict six-section JSON schema.</p></article>
+        <article class="flow-step"><b>5</b><h3>Present</h3><p>Stream visual web results or save local CLI artifacts.</p></article>
+      </div>
+    </section>
+
+    <section class="content-section" aria-labelledby="products-title">
+      <div class="section-label">Product separation</div>
+      <h2 id="products-title" class="section-heading">Different interfaces, identical repository intelligence.</h2>
+      <div class="split">
+        <article class="product-card web">
+          <div class="section-label" style="color: var(--cyan)">Browser product</div>
+          <h3>Visual understanding</h3>
+          <p>A user pastes a GitHub URL and receives streamed progress followed by folder ownership, entry points, dependency graphs, execution flow, critical files, summary, chat, and PDF export.</p>
+          <ul>
+            <li>Next.js and React interface</li>
+            <li>Interactive React Flow diagrams</li>
+            <li>Temporary result in <code>sessionStorage</code></li>
+          </ul>
+        </article>
+        <article class="product-card cli">
+          <div class="section-label">Terminal product</div>
+          <h3>Repository-native workflow</h3>
+          <p>A developer runs <code>repomd init</code> in a repository. The CLI detects its Git remote, streams the same analysis, writes local artifacts, and opens a focused chat interface.</p>
+          <ul>
+            <li>Node.js 22+ and TypeScript</li>
+            <li>No runtime package dependencies</li>
+            <li>Outputs remain under <code>.repomd/</code></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-section" aria-labelledby="reliability-title">
+      <div class="section-label">Reliability</div>
+      <h2 id="reliability-title" class="section-heading">Provider failure does not change the product contract.</h2>
+      <div class="failover">
+        <article class="provider primary">
+          <div class="section-label">Primary route</div>
+          <h3>OpenCode Zen</h3>
+          <p>DeepSeek generates the structured repository analysis and grounded chat responses.</p>
+        </article>
+        <div class="arrow-card"><div><span>→</span>ON FAILURE</div></div>
+        <article class="provider fallback">
+          <div class="section-label" style="color: var(--amber)">Fallback route</div>
+          <h3>Groq</h3>
+          <p>The server retries through the fallback while preserving the same result schema and generic client messaging.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="rules" class="content-section" aria-labelledby="rules-title">
+      <div class="section-label">Rules and safeguards</div>
+      <h2 id="rules-title" class="section-heading">The invariants that protect quality and trust.</h2>
+      <ol class="rule-list">
+        <li><strong>Keys stay server-side.</strong> GitHub and provider credentials never ship to the browser or CLI.</li>
+        <li><strong>Repository access is read-only.</strong> RepoMD reads metadata, tree paths, and selected file contents; it does not change the repository.</li>
+        <li><strong>Analysis is bounded.</strong> File count, file size, excerpts, timeouts, and output arrays have explicit limits.</li>
+        <li><strong>The schema is stable.</strong> Both products consume the same six-section analysis result regardless of provider.</li>
+        <li><strong>Failures stay client-safe.</strong> User messages do not reveal provider names, model names, credentials, or raw upstream errors.</li>
+        <li><strong>Storage stays local or temporary.</strong> Web data uses tab-scoped storage; CLI output stays in the active repository.</li>
+        <li><strong>Generated paths require evidence.</strong> The analysis prompt prohibits inventing files absent from the supplied repository tree.</li>
+        <li><strong>Private access uses least privilege.</strong> Tokens should have repository-specific read access to contents and metadata.</li>
+      </ol>
+    </section>
+
+    <section id="stack" class="content-section" aria-labelledby="stack-title">
+      <div class="section-label">Technology</div>
+      <h2 id="stack-title" class="section-heading">A small stack with clear responsibilities.</h2>
+      <table class="stack-table">
+        <thead><tr><th>Area</th><th>Technology</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td>Web application</td><td>Next.js 16 · React 19 · TypeScript</td><td>Pages, rendering, API routes, metadata, and shared contracts</td></tr>
+          <tr><td>Interface system</td><td>Tailwind CSS 4 · Lucide · Radix/shadcn</td><td>Responsive theming, reusable controls, and icons</td></tr>
+          <tr><td>Visual analysis</td><td>React Flow · Dagre</td><td>Interactive dependency and architecture graph layout</td></tr>
+          <tr><td>Reports</td><td>jsPDF · AutoTable</td><td>Portable PDF analysis export</td></tr>
+          <tr><td>CLI</td><td>Node.js 22+ · TypeScript · readline</td><td>Repository detection, progress, local artifacts, and chat</td></tr>
+          <tr><td>Repository source</td><td>GitHub REST API</td><td>Metadata, recursive tree, and selected file content</td></tr>
+          <tr><td>AI routing</td><td>OpenCode-compatible API · Groq SDK</td><td>Primary structured analysis and automatic fallback</td></tr>
+          <tr><td>Storage</td><td>sessionStorage · local filesystem</td><td>Temporary browser state and repository-local CLI output</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="content-section" aria-labelledby="talk-title">
+      <div class="section-label">30-second explanation</div>
+      <h2 id="talk-title" class="section-heading">Use this when presenting to judges.</h2>
+      <div class="talk-track">
+        <blockquote>“RepoMD has two interfaces: a visual web product and a repository-native CLI. Both call one Next.js analysis API, which reads a bounded set of files from GitHub and produces a strict six-section architecture report. OpenCode Zen is the primary intelligence engine and Groq is the automatic fallback. Credentials stay on the server, there is no central database, and every result can be explored in the browser or saved as local CLI artifacts.”</blockquote>
+        <footer>REPOMD · ARCHITECTURE TALK TRACK</footer>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <span>RepoMD architecture briefing</span>
+      <span>·</span>
+      <span>Open this file directly in any modern browser.</span>
+      <a href="./explanation.md">Detailed explanation →</a>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const nativeWidth = 1600;
+      const viewport = document.getElementById("diagram-viewport");
+      const diagram = document.getElementById("diagram");
+      const shell = document.getElementById("architecture");
+      const readout = document.getElementById("zoom-readout");
+      const fullscreenButton = document.getElementById("fullscreen");
+      let scale = 1;
+      let fitMode = true;
+
+      function applyScale(next, shouldFit = false) {
+        scale = Math.max(0.3, Math.min(1.8, next));
+        fitMode = shouldFit;
+        diagram.style.width = `${Math.round(nativeWidth * scale)}px`;
+        readout.textContent = `${Math.round(scale * 100)}%`;
+      }
+
+      function fit() {
+        const available = Math.max(280, viewport.clientWidth - 40);
+        applyScale(Math.min(1, available / nativeWidth), true);
+        viewport.scrollTo({ top: 0, left: 0 });
+      }
+
+      document.getElementById("zoom-in").addEventListener("click", () => applyScale(scale + 0.1));
+      document.getElementById("zoom-out").addEventListener("click", () => applyScale(scale - 0.1));
+      readout.addEventListener("click", fit);
+      fullscreenButton.addEventListener("click", async () => {
+        if (!document.fullscreenElement) await shell.requestFullscreen();
+        else await document.exitFullscreen();
+      });
+      document.addEventListener("fullscreenchange", () => {
+        fullscreenButton.textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
+        if (fitMode) requestAnimationFrame(fit);
+      });
+      window.addEventListener("resize", () => { if (fitMode) fit(); });
+      window.addEventListener("keydown", (event) => {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+        if (event.key === "+" || event.key === "=") applyScale(scale + 0.1);
+        if (event.key === "-") applyScale(scale - 0.1);
+        if (event.key === "0") fit();
+        if (event.key.toLowerCase() === "f") fullscreenButton.click();
+      });
+      diagram.addEventListener("load", fit);
+      fit();
+    })();
+  </script>
+</body>
+</html>

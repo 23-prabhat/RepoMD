@@ -387,7 +387,15 @@ export default function Home() {
                 width={568}
                 height={227}
                 priority
-                className="h-9 w-auto sm:h-10"
+                className="brand-logo-light h-9 w-auto sm:h-10"
+              />
+              <Image
+                src="/repomd-logo-dark.png"
+                alt="RepoMD"
+                width={568}
+                height={227}
+                priority
+                className="brand-logo-dark h-9 w-auto sm:h-10"
               />
               <span
                 className="tag-badge ml-2"

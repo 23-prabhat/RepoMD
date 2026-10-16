@@ -5,11 +5,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 Create a `.env.local` file with the server-side API keys:
 
 ```bash
+OPENCODE_API_KEY=your_opencode_zen_api_key
+OPENCODE_MODEL=deepseek-v4.1-flash
 GROQ_API_KEY=your_groq_api_key
 GITHUB_TOKEN=your_github_token
 ```
 
-`GROQ_API_KEY` is required for repository analysis and RepoChat. `GITHUB_TOKEN` is optional, but recommended to avoid GitHub's low unauthenticated rate limit.
+RepoMD uses OpenCode Zen with DeepSeek as its primary analysis and chat engine. If that request fails, it automatically retries through Groq. Keep `GROQ_API_KEY` configured for fallback behavior. `OPENCODE_MODEL` is optional and defaults to `deepseek-v4.1-flash`. `GITHUB_TOKEN` is optional, but recommended to avoid GitHub's low unauthenticated rate limit.
 
 Then install dependencies and run the development server:
 

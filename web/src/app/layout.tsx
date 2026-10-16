@@ -22,11 +22,6 @@ const bricolage = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: "RepoMD — Codebase Intelligence Agent",
   description: "Drop a GitHub URL. Get instant architecture maps, entry point detection, and dependency graphs.",
-  icons: {
-    icon: "/repomd-logo.png",
-    shortcut: "/repomd-logo.png",
-    apple: "/repomd-logo.png",
-  },
 };
 
 export default function RootLayout({

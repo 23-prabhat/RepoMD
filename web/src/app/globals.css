@@ -229,3 +229,16 @@ html {
 html:not(.dark) .text-white {
   color: #07090F;
 }
+
+/* Use dedicated assets so both themes preserve the logo's original detail. */
+.brand-logo-dark {
+  display: none;
+}
+
+html.dark .brand-logo-light {
+  display: none;
+}
+
+html.dark .brand-logo-dark {
+  display: block;
+}

@@ -1,4 +1,5 @@
 import Groq from "groq-sdk";
+import { completeWithOpenCode, isOpenCodeConfigured } from "@/lib/opencode";
 import type { AnalysisResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +13,9 @@ interface ChatRequest {
 }
 
 async function chatWithGroq(systemPrompt: string, message: string): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("GROQ_API_KEY is not configured");
+    throw new Error("The fallback AI provider is not configured");
   }
 
   const response = await new Groq({ apiKey }).chat.completions.create({
@@ -29,10 +30,29 @@ async function chatWithGroq(systemPrompt: string, message: string): Promise<stri
 
   const text = response.choices[0]?.message.content;
   if (!text) {
-    throw new Error("Groq returned an empty chat response");
+    throw new Error("The fallback AI provider returned an empty chat response");
   }
 
   return text;
+}
+
+async function chatWithFallback(systemPrompt: string, message: string): Promise<string> {
+  if (isOpenCodeConfigured()) {
+    try {
+      return await completeWithOpenCode({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message },
+        ],
+        temperature: 0.7,
+        maxTokens: 800,
+      });
+    } catch (error) {
+      console.warn("[ai] Primary chat failed; using fallback", error);
+    }
+  }
+
+  return chatWithGroq(systemPrompt, message);
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -60,7 +80,7 @@ ${JSON.stringify(analysis, null, 2)}
 Answer the user's question concisely. If the answer can be found in the analysis data, use it.
 If you refer to specific files, quote their paths. Keep responses under 200 words unless a longer answer is clearly needed. Do not hallucinate details not present in the analysis.`;
 
-    const text = await chatWithGroq(systemPrompt, message);
+    const text = await chatWithFallback(systemPrompt, message);
 
     return Response.json({ reply: text });
   } catch {

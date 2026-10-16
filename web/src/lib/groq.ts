@@ -1,12 +1,17 @@
 import Groq from "groq-sdk";
+import {
+  completeWithOpenCode,
+  isOpenCodeConfigured,
+  OpenCodeRequestError,
+} from "./opencode";
 import type { AnalysisResult, FetchedFile, RepoContext } from "./types";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 
 function getGroqClient(): Groq {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("GROQ_API_KEY is not configured");
+    throw new Error("The fallback AI provider is not configured");
   }
 
   return new Groq({ apiKey });
@@ -223,30 +228,76 @@ async function analyzeWithGroq(
 
   const text = response.choices[0]?.message.content;
   if (!text) {
-    throw new Error("Groq returned an empty repository analysis");
+    throw new Error("The fallback AI provider returned an empty repository analysis");
   }
 
   return JSON.parse(text) as AnalysisResult;
+}
+
+async function analyzeWithOpenCode(
+  context: RepoContext,
+  files: FetchedFile[],
+  contextBudget = 8_000
+): Promise<AnalysisResult> {
+  const text = await completeWithOpenCode({
+    messages: [
+      {
+        role: "system",
+        content: "You are a senior software architect. Return only the requested structured analysis.",
+      },
+      { role: "user", content: buildPrompt(context, files, contextBudget) },
+    ],
+    jsonSchema: {
+      name: "repository_analysis",
+      schema: responseJsonSchema,
+    },
+    temperature: 0.2,
+    maxTokens: 3_000,
+  });
+
+  return JSON.parse(text) as AnalysisResult;
+}
+
+type AnalysisProvider = (
+  context: RepoContext,
+  files: FetchedFile[],
+  contextBudget?: number
+) => Promise<AnalysisResult>;
+
+function shouldRetryWithCompactContext(error: unknown): boolean {
+  if (error instanceof OpenCodeRequestError) {
+    return error.status === 400 || error.status === 413;
+  }
+  return error instanceof Groq.APIError &&
+    (error.status === 413 || (error.status === 400 && error.message.includes("json_validate_failed")));
+}
+
+async function runAnalysis(
+  provider: AnalysisProvider,
+  context: RepoContext,
+  files: FetchedFile[]
+): Promise<AnalysisResult> {
+  try {
+    return await provider(context, files);
+  } catch (error) {
+    if (shouldRetryWithCompactContext(error)) {
+      return provider(context, files, 4_000);
+    }
+    throw error;
+  }
 }
 
 export async function analyzeRepository(
   context: RepoContext,
   files: FetchedFile[]
 ): Promise<AnalysisResult> {
-  try {
-    return await analyzeWithGroq(context, files);
-  } catch (error) {
-    console.warn("[ai] Analysis failed", error);
-    // Retry once with a smaller context for request-size or structured-output failures.
-    if (error instanceof Groq.APIError &&
-        (error.status === 413 || (error.status === 400 && error.message.includes("json_validate_failed")))) {
-      try {
-        return await analyzeWithGroq(context, files, 4_000);
-      } catch (retryError) {
-        console.warn("[ai] Compact analysis retry failed", retryError);
-        throw retryError;
-      }
+  if (isOpenCodeConfigured()) {
+    try {
+      return await runAnalysis(analyzeWithOpenCode, context, files);
+    } catch (error) {
+      console.warn("[ai] Primary analysis failed; using fallback", error);
     }
-    throw error;
   }
+
+  return runAnalysis(analyzeWithGroq, context, files);
 }
