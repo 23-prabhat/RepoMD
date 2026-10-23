@@ -9,6 +9,23 @@ RepoMD has two interfaces backed by the same repository-analysis API:
 
 Open the standalone [architecture presentation](architecture.html) for an interactive, fullscreen judge briefing. The complete [architecture explanation](explanation.md) provides the presentation narrative, API flow, operating rules, security boundaries, tech stack, limits, and tradeoffs.
 
+## Install the CLI locally
+
+From the project root:
+
+```bash
+npm install -g ./cli
+repomd --version
+```
+
+After the package is published, users will be able to install or run it with:
+
+```bash
+npm install -g repomd
+# or
+npx repomd@latest init
+```
+
 ## Run locally
 
 Start the web service:
@@ -18,7 +35,7 @@ cd web
 pnpm dev
 ```
 
-The personal CLI is linked as `repomd` on this machine. From a GitHub repository, run:
+From a GitHub repository, run:
 
 ```bash
 repomd init

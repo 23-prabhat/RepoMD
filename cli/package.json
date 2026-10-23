@@ -1,19 +1,46 @@
 {
-  "name": "@repomd/cli",
+  "name": "repomd",
   "version": "0.1.0",
-  "private": true,
+  "description": "Repository architecture diagrams, entry-point analysis, and repo-aware chat from your terminal.",
   "type": "module",
   "bin": {
     "repomd": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "assets",
+    "README.md"
+  ],
   "scripts": {
     "dev": "npm run build && node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test test/*.test.mjs"
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/23-prabhat/Swayambhu_PS_04.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/23-prabhat/Swayambhu_PS_04#readme",
+  "bugs": {
+    "url": "https://github.com/23-prabhat/Swayambhu_PS_04/issues"
+  },
+  "keywords": [
+    "repository",
+    "architecture",
+    "codebase",
+    "diagram",
+    "cli",
+    "developer-tools"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "dependencies": {},
   "devDependencies": {

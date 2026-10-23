@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import process from "node:process";
 import { runApp } from "./App.js";
 import { detectRepositoryUrl } from "./git.js";
 import { loadProject } from "./storage.js";
+const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 function help() {
     process.stdout.write(`RepoMD CLI
 
@@ -13,6 +15,7 @@ Usage:
 
 Options:
   --api <url>               RepoMD web API (default: REPOMD_API_URL or http://localhost:3000)
+  --version                 Show the installed CLI version
   --help                    Show this help
 `);
 }
@@ -24,6 +27,10 @@ async function main() {
     const args = process.argv.slice(2);
     if (args.includes("--help") || args.includes("-h")) {
         help();
+        return;
+    }
+    if (args.includes("--version") || args.includes("-v")) {
+        process.stdout.write(`${VERSION}\n`);
         return;
     }
     const first = args[0];
